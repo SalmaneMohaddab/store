@@ -38,4 +38,4 @@ router.put('/:id/status', authenticate, restrictTo('admin'), orderController.upd
  */
 router.put('/:id/cancel', authenticate, isOwnerOrAdmin('order'), orderController.cancelOrder);
 
-module.exports = router; 
+module.exports = router;

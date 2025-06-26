@@ -28,7 +28,7 @@ exports.authenticate = async (req, res, next) => {
     const decoded = await promisify(jwt.verify)(token, JWT_SECRET);
 
     // 3) Check if user still exists
-    const user = await query('SELECT id, email, full_name, role, account_status FROM users WHERE id = ?', [decoded.userId]);
+    const user = await query('SELECT user_id, email, full_name, role, account_status FROM users WHERE user_id = ?', [decoded.userId]);
     
     if (!user || user.length === 0) {
       return next(new AppError('The user belonging to this token no longer exists.', 401));
@@ -76,7 +76,7 @@ exports.isOwnerOrAdmin = (resourceType, paramName = 'id') => {
   return async (req, res, next) => {
     try {
       const resourceId = req.params[paramName];
-      const userId = req.user.id;
+      const userId = req.user.user_id; // fix: use user_id
       const isAdmin = req.user.role === 'admin';
       
       // Admins can access any resource
@@ -89,7 +89,7 @@ exports.isOwnerOrAdmin = (resourceType, paramName = 'id') => {
       switch (resourceType) {
         case 'order':
           table = 'orders';
-          column = 'id';
+          column = 'order_id'; // fix: use order_id
           break;
         case 'address':
           table = 'user_addresses';

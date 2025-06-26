@@ -11,7 +11,10 @@ router.get('/profile', authenticate, (req, res) => {
   res.json({
     status: 'success',
     data: {
-      user: req.user
+      user: {
+        ...req.user,
+        user_id: req.user.user_id // ensure user_id is present
+      }
     }
   });
 });
@@ -46,4 +49,4 @@ router.get('/', authenticate, restrictTo('admin'), (req, res) => {
   });
 });
 
-module.exports = router; 
+module.exports = router;

@@ -4,7 +4,8 @@ const AppError = require('../utils/appError');
 // Get all orders for a user
 exports.getUserOrders = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.user_id;
+    console.log('[getUserOrders] userId:', userId);
     
     const orders = await database.query(`
       SELECT o.*, 
@@ -20,11 +21,13 @@ exports.getUserOrders = async (req, res, next) => {
           )
         ) as order_items
       FROM orders o
-      LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN order_items oi ON o.order_id = oi.order_id
       WHERE o.user_id = ?
-      GROUP BY o.id
+      GROUP BY o.order_id
       ORDER BY o.created_at DESC
     `, [userId]);
+
+    console.log('[getUserOrders] orders result:', orders);
 
     // Make sure orders is an array
     const ordersList = Array.isArray(orders) ? orders : orders[0] || [];
@@ -54,13 +57,13 @@ exports.getUserOrders = async (req, res, next) => {
 exports.getOrderDetails = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     console.log(`Fetching order details for order ID: ${id}, user ID: ${userId}`);
     
     // First, check if the order exists and belongs to the user
     const [orderCheck] = await database.query(`
-      SELECT * FROM orders WHERE id = ? AND user_id = ?
+      SELECT * FROM orders WHERE order_id = ? AND user_id = ?
     `, [id, userId]);
 
     if (!orderCheck || orderCheck.length === 0) {
@@ -85,9 +88,9 @@ exports.getOrderDetails = async (req, res, next) => {
           )
         ) as order_items
       FROM orders o
-      LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.id = ? AND o.user_id = ?
-      GROUP BY o.id
+      LEFT JOIN order_items oi ON o.order_id = oi.order_id
+      WHERE o.order_id = ? AND o.user_id = ?
+      GROUP BY o.order_id
     `, [id, userId]);
 
     console.log('Query result:', orderResult);
@@ -98,7 +101,7 @@ exports.getOrderDetails = async (req, res, next) => {
 
     // Create a new object with the order data
     const order = {
-      id: orderResult.id,
+      order_id: orderResult.order_id,
       user_id: orderResult.user_id,
       address: orderResult.address,
       phone_number: orderResult.phone_number,
@@ -132,7 +135,7 @@ exports.createOrder = async (req, res, next) => {
     connection = await database.beginTransaction();
     
     const { items, totalAmount, address, phoneNumber } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     // Create order
     const [orderResult] = await connection.execute(`
@@ -184,9 +187,9 @@ exports.createOrder = async (req, res, next) => {
           )
         ) as items
       FROM orders o
-      LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.id = ?
-      GROUP BY o.id
+      LEFT JOIN order_items oi ON o.order_id = oi.order_id
+      WHERE o.order_id = ?
+      GROUP BY o.order_id
     `, [orderId]);
     
     const order = orders[0];
@@ -228,7 +231,7 @@ exports.updateOrderStatus = async (req, res, next) => {
     const [result] = await database.query(`
       UPDATE orders 
       SET status = ?
-      WHERE id = ?
+      WHERE order_id = ?
     `, [status, id]);
     
     if (result.affectedRows === 0) {
@@ -248,12 +251,12 @@ exports.updateOrderStatus = async (req, res, next) => {
 exports.cancelOrder = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     // Check if order exists and belongs to user
     const [orders] = await database.query(`
       SELECT status FROM orders 
-      WHERE id = ? AND user_id = ?
+      WHERE order_id = ? AND user_id = ?
     `, [id, userId]);
     
     if (orders.length === 0) {
@@ -269,7 +272,7 @@ exports.cancelOrder = async (req, res, next) => {
     await database.query(`
       UPDATE orders 
       SET status = 'cancelled'
-      WHERE id = ?
+      WHERE order_id = ?
     `, [id]);
     
     res.json({
@@ -279,4 +282,4 @@ exports.cancelOrder = async (req, res, next) => {
   } catch (error) {
     next(new AppError('Error cancelling order', 500));
   }
-}; 
+};

@@ -4,7 +4,7 @@ const AppError = require('../utils/appError');
 // Get all addresses for a user
 exports.getUserAddresses = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     const addresses = await database.query(`
       SELECT * FROM user_addresses
@@ -28,7 +28,7 @@ exports.getUserAddresses = async (req, res, next) => {
 exports.getAddressById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     const addresses = await database.query(`
       SELECT * FROM user_addresses 
@@ -56,7 +56,7 @@ exports.createAddress = async (req, res, next) => {
   const connection = await database.beginTransaction();
   
   try {
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     const { 
       title, 
       street, 
@@ -128,7 +128,7 @@ exports.updateAddress = async (req, res, next) => {
   
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     const { 
       title, 
       street, 
@@ -214,7 +214,7 @@ exports.deleteAddress = async (req, res, next) => {
   
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     // Check if address exists and belongs to user
     const addresses = await connection.query(`
@@ -264,4 +264,4 @@ exports.deleteAddress = async (req, res, next) => {
     console.error('Error deleting address:', error);
     next(new AppError('Error deleting address', 500));
   }
-}; 
+};

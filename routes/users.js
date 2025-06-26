@@ -58,8 +58,8 @@ module.exports = (pool) => {
           fullName: full_name,
           email: email,
           phoneNumber: phone_number,
-          token: token
-        }
+        },
+        token
       });
     } catch (error) {
       next(error);
@@ -106,7 +106,7 @@ module.exports = (pool) => {
       // Create JWT token
       const token = jwt.sign(
         { 
-          userId: user.id,
+          userId: user.user_id,
           email: user.email,
           fullName: user.full_name 
         },
@@ -117,12 +117,12 @@ module.exports = (pool) => {
       res.json({
         status: 'success',
         data: {
-          userId: user.id,
+          userId: user.user_id,
           fullName: user.full_name,
           email: user.email,
           phoneNumber: user.phone_number,
-          token: token
-        }
+        },
+        token
       });
     } catch (error) {
       next(error);
@@ -135,7 +135,7 @@ module.exports = (pool) => {
       const userId = req.user.userId;
       
       const [users] = await pool.execute(
-        'SELECT id, uid, full_name, email, phone_number, created_at, updated_at FROM users WHERE id = ?',
+        'SELECT user_id, uid, full_name, email, phone_number, created_at, updated_at FROM users WHERE user_id = ?',
         [userId]
       );
       
@@ -148,7 +148,7 @@ module.exports = (pool) => {
       
       // Format response data for frontend compatibility
       const userData = {
-        id: users[0].id,
+        user_id: users[0].user_id,
         uid: users[0].uid,
         fullName: users[0].full_name,
         email: users[0].email,
@@ -174,7 +174,7 @@ module.exports = (pool) => {
       
       // Check if user exists
       const [users] = await pool.execute(
-        'SELECT * FROM users WHERE id = ?',
+        'SELECT * FROM users WHERE user_id = ?',
         [userId]
       );
       
@@ -187,7 +187,7 @@ module.exports = (pool) => {
       
       // Update user
       await pool.execute(
-        'UPDATE users SET full_name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        'UPDATE users SET full_name = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
         [
           full_name || users[0].full_name,
           email || users[0].email,
@@ -197,13 +197,12 @@ module.exports = (pool) => {
       
       // Get updated user
       const [updatedUsers] = await pool.execute(
-        'SELECT id, uid, full_name, email, phone_number, created_at, updated_at FROM users WHERE id = ?',
+        'SELECT user_id, uid, full_name, email, phone_number, created_at, updated_at FROM users WHERE user_id = ?',
         [userId]
       );
-      
       // Format response data for frontend compatibility
       const userData = {
-        id: updatedUsers[0].id,
+        user_id: updatedUsers[0].user_id,
         uid: updatedUsers[0].uid,
         fullName: updatedUsers[0].full_name,
         email: updatedUsers[0].email,
@@ -254,4 +253,4 @@ module.exports = (pool) => {
   router.authenticate = authenticate;
 
   return router;
-}; 
+};

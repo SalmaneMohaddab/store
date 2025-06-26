@@ -20,7 +20,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';
 const generateToken = (user) => {
   return jwt.sign(
     {
-      userId: user.id,
+      userId: user.user_id, // changed from user.id
       email: user.email,
       fullName: user.full_name,
       role: user.role
@@ -98,7 +98,7 @@ exports.register = async (req, res, next) => {
     const userId = result[0].insertId;
     
     // Create JWT token
-    const user = { id: userId, email, full_name, role: 'user' };
+    const user = { user_id: userId, email, full_name, role: 'user' };
     const token = generateToken(user);
     
     // First commit the user creation transaction
@@ -113,7 +113,7 @@ exports.register = async (req, res, next) => {
       status: 'success',
       data: {
         user: {
-          id: userId,
+          user_id: userId,
           uid: uid,
           fullName: full_name,
           email,
@@ -169,8 +169,8 @@ exports.login = async (req, res, next) => {
         const connection = await beginTransaction();
         try {
           await connection.execute(
-            'UPDATE users SET uid = ? WHERE id = ?',
-            [firebase_uid, user.id]
+            'UPDATE users SET uid = ? WHERE user_id = ?', // changed from id
+            [firebase_uid, user.user_id]
           );
           await commitTransaction(connection);
           
@@ -186,8 +186,8 @@ exports.login = async (req, res, next) => {
       // Update last login in a separate transaction
       try {
         await query(
-          'UPDATE users SET login_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = ?',
-          [user.id]
+          'UPDATE users SET login_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE user_id = ?', // changed from id
+          [user.user_id]
         );
       } catch (error) {
         console.error(`Error updating last login: ${error.message}`);
@@ -200,7 +200,7 @@ exports.login = async (req, res, next) => {
       // Generate refresh token with retry logic
       let refreshToken;
       try {
-        refreshToken = await generateRefreshToken(user.id);
+        refreshToken = await generateRefreshToken(user.user_id);
       } catch (error) {
         console.error(`Error generating refresh token: ${error.message}`);
         // If refresh token generation fails, we can still return the JWT token
@@ -214,7 +214,7 @@ exports.login = async (req, res, next) => {
       
       const responseData = {
         user: {
-          id: user.id,
+          user_id: user.user_id,
           uid: user.uid,
           fullName: user.full_name,
           email: user.email,
@@ -411,7 +411,7 @@ exports.verifyOTP = async (req, res, next) => {
       );
       userId = result[0].insertId;
       user = {
-        id: userId,
+        user_id: userId,
         uid,
         phone_number,
         full_name,
@@ -422,7 +422,8 @@ exports.verifyOTP = async (req, res, next) => {
     } else {
       // User exists - no need for full_name and email
       user = users[0][0];
-      userId = user.id;
+      userId = user.user_id || user.id; // fallback for legacy
+      user.user_id = userId;
       console.log('[verifyOTP] Existing user:', user);
     }
 
@@ -433,13 +434,13 @@ exports.verifyOTP = async (req, res, next) => {
     console.log('[verifyOTP] Token generated');
 
     // Generate refresh token outside transaction
-    const refreshToken = await generateRefreshToken(userId);
+    const refreshToken = await generateRefreshToken(user.user_id);
     console.log('[verifyOTP] Refresh token generated');
 
     // Update last login
     await query(
-      'UPDATE users SET login_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = ?',
-      [userId]
+      'UPDATE users SET login_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE user_id = ?',
+      [user.user_id]
     );
     console.log('[verifyOTP] Last login updated');
 
@@ -447,7 +448,7 @@ exports.verifyOTP = async (req, res, next) => {
       status: 'success',
       data: {
         user: {
-          id: userId,
+          user_id: user.user_id,
           uid: user.uid,
           fullName: user.full_name,
           phoneNumber: user.phone_number,
@@ -482,7 +483,7 @@ exports.refreshToken = async (req, res, next) => {
     
     // Find refresh token in database
     const tokens = await query(
-      'SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > NOW() AND is_revoked = 0',
+      'SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > NOW() AND revoked = 0',
       [refreshToken]
     );
     
@@ -508,7 +509,7 @@ exports.refreshToken = async (req, res, next) => {
     
     // Revoke old refresh token
     await query(
-      'UPDATE refresh_tokens SET is_revoked = 1 WHERE token = ?',
+      'UPDATE refresh_tokens SET revoked = 1 WHERE token = ?',
       [refreshToken]
     );
     
@@ -535,7 +536,7 @@ exports.logout = async (req, res, next) => {
     if (refreshToken) {
       // Revoke refresh token if provided
       await query(
-        'UPDATE refresh_tokens SET is_revoked = 1 WHERE token = ?',
+        'UPDATE refresh_tokens SET revoked = 1 WHERE token = ?',
         [refreshToken]
       );
     }
@@ -567,7 +568,7 @@ exports.checkToken = async (req, res) => {
 exports.updateProfile = async (req, res, next) => {
   try {
     const { full_name, email } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     // Update user profile
     await query(
@@ -591,7 +592,7 @@ exports.updateProfile = async (req, res, next) => {
 exports.changePassword = async (req, res, next) => {
   try {
     const { current_password, new_password } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     // Get user data
     const users = await query(
