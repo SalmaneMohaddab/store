@@ -61,7 +61,7 @@ exports.getAllProducts = async (req, res, next) => {
           const offset = (page - 1) * limit;
           
           const { query } = require('../config/database');
-          const products = await query(`SELECT * FROM products ORDER BY id DESC LIMIT ${limit} OFFSET ${offset}`);
+          const products = await query(`SELECT * FROM products ORDER BY product_id DESC LIMIT ${limit} OFFSET ${offset}`);
           const countResult = await query('SELECT COUNT(*) as total FROM products');
           const total = countResult[0].total;
           
@@ -181,22 +181,17 @@ exports.updateProduct = async (req, res, next) => {
 exports.deleteProduct = async (req, res, next) => {
   try {
     const productId = req.params.id;
+    await Product.delete(productId);
     
-    try {
-      await Product.delete(productId);
-      
-      res.json({
-        status: 'success',
-        message: 'Product deleted successfully'
-      });
-    } catch (err) {
-      if (err.message === 'Product not found') {
-        return next(new AppError(err.message, 404));
-      }
-      return next(new AppError(err.message, 400));
+    res.json({
+      status: 'success',
+      message: 'Product deleted successfully'
+    });
+  } catch (err) {
+    if (err.message === 'Product not found') {
+      return next(new AppError(err.message, 404));
     }
-  } catch (error) {
-    next(error);
+    return next(new AppError(err.message, 400));
   }
 };
 
@@ -216,4 +211,4 @@ exports.searchProducts = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-}; 
+};

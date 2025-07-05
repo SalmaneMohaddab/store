@@ -16,7 +16,7 @@ module.exports = (pool) => {
         params.push(category_id);
       }
       
-      sql += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+      sql += ' ORDER BY product_id DESC LIMIT ? OFFSET ?';
       params.push(Number(limit), Number(offset));
       
       const [products] = await pool.execute(sql, params);
@@ -56,7 +56,7 @@ module.exports = (pool) => {
   router.get('/:id', async (req, res, next) => {
     try {
       const [product] = await pool.execute(
-        'SELECT * FROM products WHERE id = ?',
+        'SELECT * FROM products WHERE product_id = ?',
         [req.params.id]
       );
       
@@ -113,7 +113,7 @@ module.exports = (pool) => {
       );
       
       const [newProduct] = await pool.execute(
-        'SELECT * FROM products WHERE id = ?',
+        'SELECT * FROM products WHERE product_id = ?',
         [result.insertId]
       );
       
@@ -134,7 +134,7 @@ module.exports = (pool) => {
       
       // Check if product exists
       const [product] = await pool.execute(
-        'SELECT * FROM products WHERE id = ?',
+        'SELECT * FROM products WHERE product_id = ?',
         [productId]
       );
       
@@ -148,7 +148,7 @@ module.exports = (pool) => {
       await pool.execute(
         `UPDATE products 
          SET name = ?, price = ?, category_id = ?, discount = ?, rating = ?, image_url = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ?`,
+         WHERE product_id = ?`,
         [
           name || product[0].name,
           price || product[0].price,
@@ -161,7 +161,7 @@ module.exports = (pool) => {
       );
       
       const [updatedProduct] = await pool.execute(
-        'SELECT * FROM products WHERE id = ?',
+        'SELECT * FROM products WHERE product_id = ?',
         [productId]
       );
       
@@ -181,7 +181,7 @@ module.exports = (pool) => {
       
       // Check if product exists
       const [product] = await pool.execute(
-        'SELECT * FROM products WHERE id = ?',
+        'SELECT * FROM products WHERE product_id = ?',
         [productId]
       );
       
@@ -193,7 +193,7 @@ module.exports = (pool) => {
       }
       
       await pool.execute(
-        'DELETE FROM products WHERE id = ?',
+        'DELETE FROM products WHERE product_id = ?',
         [productId]
       );
       
@@ -207,4 +207,4 @@ module.exports = (pool) => {
   });
 
   return router;
-}; 
+};

@@ -43,6 +43,10 @@ const generateRefreshToken = async (userId) => {
   let retries = 3;
   while (retries > 0) {
     try {
+      // Ensure user_id is available
+      if (!userId) {
+        throw new Error('Cannot issue refresh token: user_id is missing');
+      }
       await query(
         'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)',
         [userId, refreshToken, expiresAt]
@@ -76,7 +80,7 @@ exports.register = async (req, res, next) => {
     
     // Validate required fields
     if (!full_name || !email || !phone_number || !uid) {
-      return next(new AppError('All fields are required', 400));
+      return next(new AppError('جميع الحقول مطلوبة', 400));
     }
     
     // Check if user already exists
@@ -86,7 +90,7 @@ exports.register = async (req, res, next) => {
     );
     
     if (existingUsers.length > 0) {
-      return next(new AppError('User with this email or phone number already exists', 409));
+      return next(new AppError('يوجد مستخدم بهذا البريد الإلكتروني أو رقم الهاتف بالفعل', 409));
     }
     
     // Insert user with transaction (including the Firebase UID but no password)
@@ -151,7 +155,7 @@ exports.login = async (req, res, next) => {
       );
       
       if (users.length === 0) {
-        return next(new AppError('User not found', 404));
+        return next(new AppError('المستخدم غير موجود', 404));
       }
       
       const user = users[0];
@@ -159,7 +163,7 @@ exports.login = async (req, res, next) => {
       
       // Check if account is active
       if (user.account_status !== 'active') {
-        return next(new AppError('Your account has been suspended or deactivated. Please contact support.', 401));
+        return next(new AppError('تم تعليق حسابك أو إيقافه. يرجى التواصل مع الدعم.', 401));
       }
       
       // Use a dedicated transaction for updating the Firebase UID if needed
@@ -242,7 +246,7 @@ exports.login = async (req, res, next) => {
     
     // Validate required fields
     if (!phone_number || !password) {
-      return next(new AppError('Phone number and password are required', 400));
+      return next(new AppError('رقم الهاتف وكلمة المرور مطلوبة', 400));
     }
     
     // Find user by phone number
@@ -252,14 +256,14 @@ exports.login = async (req, res, next) => {
     );
     
     if (users.length === 0) {
-      return next(new AppError('Invalid credentials', 401));
+      return next(new AppError('بيانات الدخول غير صحيحة', 401));
     }
     
     const user = users[0];
     
     // Check if account is active
     if (user.account_status !== 'active') {
-      return next(new AppError('Your account has been suspended or deactivated. Please contact support.', 401));
+      return next(new AppError('تم تعليق حسابك أو إيقافه. يرجى التواصل مع الدعم.', 401));
     }
     
     // Verify password
@@ -278,10 +282,10 @@ exports.login = async (req, res, next) => {
           'UPDATE users SET account_status = "inactive" WHERE id = ?',
           [user.id]
         );
-        return next(new AppError('Too many failed login attempts. Your account has been locked for security reasons. Please contact support.', 401));
+        return next(new AppError('عدد محاولات الدخول غير الصحيحة تجاوز الحد المسموح. تم قفل حسابك لأسباب أمنية. يرجى التواصل مع الدعم.', 401));
       }
       
-      return next(new AppError('Invalid credentials', 401));
+      return next(new AppError('بيانات الدخول غير صحيحة', 401));
     }
     
     // Reset login attempts on successful login
@@ -326,12 +330,11 @@ exports.sendOTP = async (req, res, next) => {
     const { phone_number } = req.body;
 
     if (!phone_number) {
-      return next(new AppError('Phone number is required', 400));
+      return next(new AppError('رقم الهاتف مطلوب', 400));
     }
-
     // Validate phone number format
-    if (!phone_number.match(/^\+212[0-9]{9}$/)) {
-      return next(new AppError('Invalid phone number format. Must be +212XXXXXXXXX', 400));
+    if (!phone_number.match(/^[+][0-9]{11,}$/)) {
+      return next(new AppError('صيغة رقم الهاتف غير صحيحة. يجب أن يكون +212XXXXXXXXX', 400));
     }
 
     // Send OTP via Twilio
@@ -364,7 +367,7 @@ exports.verifyOTP = async (req, res, next) => {
 
     if (!phone_number || !code) {
       console.log('[verifyOTP] Missing phone_number or code');
-      return next(new AppError('Phone number and code are required', 400));
+      return next(new AppError('رقم الهاتف ورمز التحقق مطلوبان', 400));
     }
 
     // Verify OTP via Twilio
@@ -373,7 +376,7 @@ exports.verifyOTP = async (req, res, next) => {
 
     if (verificationCheck.status !== 'approved') {
       console.log('[verifyOTP] OTP not approved');
-      return next(new AppError('Invalid OTP code', 400));
+      return next(new AppError('رمز التحقق غير صحيح', 400));
     }
 
     // Start transaction
@@ -394,13 +397,12 @@ exports.verifyOTP = async (req, res, next) => {
       // User doesn't exist - require full_name and email for registration
       if (!full_name || !email) {
         console.log('[verifyOTP] Missing full_name or email for new user');
-        return next(new AppError('Full name and email are required for registration', 400));
+        return next(new AppError('الاسم الكامل والبريد الإلكتروني مطلوبان للتسجيل', 400));
       }
-
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        return next(new AppError('Invalid email format', 400));
+        return next(new AppError('صيغة البريد الإلكتروني غير صحيحة', 400));
       }
 
       // Create new user
@@ -478,7 +480,7 @@ exports.refreshToken = async (req, res, next) => {
     const { refreshToken } = req.body;
     
     if (!refreshToken) {
-      return next(new AppError('Refresh token is required', 400));
+      return next(new AppError('رمز التحديث مطلوب', 400));
     }
     
     // Find refresh token in database
@@ -488,17 +490,17 @@ exports.refreshToken = async (req, res, next) => {
     );
     
     if (tokens.length === 0) {
-      return next(new AppError('Invalid or expired refresh token', 401));
+      return next(new AppError('رمز التحديث غير صالح أو منتهي الصلاحية', 401));
     }
     
     // Get user data
     const users = await query(
-      'SELECT * FROM users WHERE id = ?',
+      'SELECT * FROM users WHERE user_id = ?',
       [tokens[0].user_id]
     );
     
     if (users.length === 0) {
-      return next(new AppError('User not found', 404));
+      return next(new AppError('المستخدم غير موجود', 404));
     }
     
     const user = users[0];
@@ -596,12 +598,12 @@ exports.changePassword = async (req, res, next) => {
     
     // Get user data
     const users = await query(
-      'SELECT * FROM users WHERE id = ?',
+      'SELECT * FROM users WHERE user_id = ?',
       [userId]
     );
     
     if (users.length === 0) {
-      return next(new AppError('User not found', 404));
+      return next(new AppError('المستخدم غير موجود', 404));
     }
     
     const user = users[0];
@@ -610,7 +612,7 @@ exports.changePassword = async (req, res, next) => {
     const isPasswordValid = await bcrypt.compare(current_password, user.password);
     
     if (!isPasswordValid) {
-      return next(new AppError('Current password is incorrect', 401));
+      return next(new AppError('كلمة المرور الحالية غير صحيحة', 401));
     }
     
     // Hash new password
@@ -640,7 +642,7 @@ exports.forgotPassword = async (req, res, next) => {
     const { email } = req.body;
     
     if (!email) {
-      return next(new AppError('Email is required', 400));
+      return next(new AppError('البريد الإلكتروني مطلوب', 400));
     }
     
     // Find user by email
@@ -689,12 +691,11 @@ exports.resetPassword = async (req, res, next) => {
     const { token, password } = req.body;
     
     if (!token || !password) {
-      return next(new AppError('Token and new password are required', 400));
+      return next(new AppError('رمز التحقق وكلمة المرور الجديدة مطلوبة', 400));
     }
-    
     // Validate password strength
     if (password.length < 8) {
-      return next(new AppError('Password must be at least 8 characters long', 400));
+      return next(new AppError('يجب أن تتكون كلمة المرور من 8 أحرف على الأقل', 400));
     }
     
     // Find user by reset token
@@ -704,7 +705,7 @@ exports.resetPassword = async (req, res, next) => {
     );
     
     if (users.length === 0) {
-      return next(new AppError('Invalid or expired token', 400));
+      return next(new AppError('رمز التحقق غير صالح أو منتهي الصلاحية', 400));
     }
     
     // Hash new password

@@ -15,7 +15,7 @@ class Product {
       search,
       min_price, 
       max_price,
-      sort = 'id', 
+      sort = 'product_id', 
       order = 'DESC',
       limit = 20, 
       page = 1 
@@ -65,8 +65,8 @@ class Product {
       }
       
       // Validate sort and order parameters
-      const allowedSortFields = ['id', 'name', 'price', 'rating', 'created_at'];
-      const sortField = allowedSortFields.includes(sort) ? sort : 'id';
+      const allowedSortFields = ['product_id', 'name', 'price', 'rating', 'created_at'];
+      const sortField = allowedSortFields.includes(sort) ? sort : 'product_id';
       
       const orderDirection = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
       
@@ -142,10 +142,9 @@ class Product {
    */
   static async findById(id) {
     const products = await query(
-      'SELECT * FROM products WHERE id = ?',
+      'SELECT * FROM products WHERE product_id = ?',
       [id]
     );
-    
     return products.length > 0 ? products[0] : null;
   }
   
@@ -283,7 +282,7 @@ class Product {
     // If changing SKU, check if it's unique
     if (sku && sku !== product.sku) {
       const existingSku = await query(
-        'SELECT * FROM products WHERE sku = ? AND id != ?',
+        'SELECT * FROM products WHERE sku = ? AND product_id != ?',
         [sku, id]
       );
       
@@ -298,7 +297,7 @@ class Product {
        SET name = ?, price = ?, category_id = ?, discount = ?, 
            rating = ?, image_url = ?, stock_quantity = ?, sku = ?, 
            description = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`,
+       WHERE product_id = ?`,
       [
         name || product.name,
         price || product.price,
@@ -345,7 +344,7 @@ class Product {
     
     // Delete product
     await query(
-      'DELETE FROM products WHERE id = ?',
+      'DELETE FROM products WHERE product_id = ?',
       [id]
     );
     
@@ -388,7 +387,7 @@ class Product {
     }
     
     await query(
-      'UPDATE products SET stock_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      'UPDATE products SET stock_quantity = ?, updated_at = CURRENT_TIMESTAMP WHERE product_id = ?',
       [newStock, id]
     );
     
@@ -396,4 +395,4 @@ class Product {
   }
 }
 
-module.exports = Product; 
+module.exports = Product;
