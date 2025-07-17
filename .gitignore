@@ -4,6 +4,9 @@ node_modules/
 # Environment variables and secrets
 .env
 .env.*
+.env.local
+.env.development
+.env.production
 
 # Logs
 npm-debug.log*
@@ -22,6 +25,7 @@ Thumbs.db
 db/*.sqlite
 db/*.db
 store_database.sql
+store.sql
 
 # Build output
 /dist/
@@ -35,13 +39,17 @@ store_database.sql
 
 # Misc
 coverage/
+*.bak
+*.tmp
+*.swp
+*.swo
 
-# Public assets (optional, if generated or user-uploaded)
-public/*.png
-public/*.jpg
-public/*.jpeg
-public/*.gif
-public/*.svg
+# Public assets (user-uploaded or generated)
+public/*
+!public/.gitkeep
 
 # Migrations (optional, if generated)
 migrations/
+
+# Config files (manual review: do not commit secrets)
+# config/database.js

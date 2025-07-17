@@ -327,14 +327,39 @@ exports.login = async (req, res, next) => {
  */
 exports.sendOTP = async (req, res, next) => {
   try {
-    const { phone_number } = req.body;
+    const { phone_number, email } = req.body;
+
+    console.log('[sendOTP] Received phone_number:', phone_number, 'email:', email);
 
     if (!phone_number) {
       return next(new AppError('رقم الهاتف مطلوب', 400));
     }
+    if (!email) {
+      return next(new AppError('البريد الإلكتروني مطلوب', 400));
+    }
     // Validate phone number format
     if (!phone_number.match(/^[+][0-9]{11,}$/)) {
       return next(new AppError('صيغة رقم الهاتف غير صحيحة. يجب أن يكون +212XXXXXXXXX', 400));
+    }
+
+    // Check if user exists with this phone number
+    const usersByPhone = await query('SELECT * FROM users WHERE phone_number = ?', [phone_number]);
+    console.log('[sendOTP] Users found with this phone_number:', usersByPhone.length);
+    if (usersByPhone.length > 0) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'يوجد حساب بالفعل بهذا الرقم',
+      });
+    }
+
+    // Check if user exists with this email
+    const usersByEmail = await query('SELECT * FROM users WHERE email = ?', [email]);
+    console.log('[sendOTP] Users found with this email:', usersByEmail.length);
+    if (usersByEmail.length > 0) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'يوجد حساب بالفعل بهذا البريد الإلكتروني',
+      });
     }
 
     // Send OTP via Twilio

@@ -32,7 +32,7 @@ exports.getAddressById = async (req, res, next) => {
     
     const addresses = await database.query(`
       SELECT * FROM user_addresses 
-      WHERE address_id = ? AND user_id = ?
+      WHERE id = ? AND user_id = ?
     `, [id, userId]);
     
     if (addresses.length === 0) {
@@ -106,7 +106,7 @@ exports.createAddress = async (req, res, next) => {
     // Get the created address
     const [address] = await database.query(`
       SELECT * FROM user_addresses 
-      WHERE address_id = ?
+      WHERE id = ?
     `, [result.insertId]);
     
     res.status(201).json({
@@ -143,7 +143,7 @@ exports.updateAddress = async (req, res, next) => {
     // Check if address exists and belongs to user
     const addresses = await connection.query(`
       SELECT * FROM user_addresses 
-      WHERE address_id = ? AND user_id = ?
+      WHERE id = ? AND user_id = ?
     `, [id, userId]);
     
     if (addresses.length === 0) {
@@ -156,7 +156,7 @@ exports.updateAddress = async (req, res, next) => {
       await connection.query(`
         UPDATE user_addresses 
         SET is_default = FALSE 
-        WHERE user_id = ? AND address_id != ?
+        WHERE user_id = ? AND id != ?
       `, [userId, id]);
     }
     
@@ -173,7 +173,7 @@ exports.updateAddress = async (req, res, next) => {
         longitude = ?,
         place_link = ?,
         updated_at = CURRENT_TIMESTAMP
-      WHERE address_id = ? AND user_id = ?
+      WHERE id = ? AND user_id = ?
     `, [
       title || 'موقع العمل',
       street,
@@ -192,7 +192,7 @@ exports.updateAddress = async (req, res, next) => {
     // Get the updated address
     const [updatedAddress] = await database.query(`
       SELECT * FROM user_addresses 
-      WHERE address_id = ?
+      WHERE id = ?
     `, [id]);
     
     res.json({
@@ -219,7 +219,7 @@ exports.deleteAddress = async (req, res, next) => {
     // Check if address exists and belongs to user
     const addresses = await connection.query(`
       SELECT * FROM user_addresses 
-      WHERE address_id = ? AND user_id = ?
+      WHERE id = ? AND user_id = ?
     `, [id, userId]);
     
     if (addresses.length === 0) {
@@ -232,7 +232,7 @@ exports.deleteAddress = async (req, res, next) => {
     // Delete the address
     await connection.query(`
       DELETE FROM user_addresses 
-      WHERE address_id = ? AND user_id = ?
+      WHERE id = ? AND user_id = ?
     `, [id, userId]);
     
     // If the deleted address was the default, set another address as default if available
@@ -248,8 +248,8 @@ exports.deleteAddress = async (req, res, next) => {
         await connection.query(`
           UPDATE user_addresses 
           SET is_default = TRUE 
-          WHERE address_id = ?
-        `, [remainingAddresses[0].address_id]);
+          WHERE id = ?
+        `, [remainingAddresses[0].id]);
       }
     }
     

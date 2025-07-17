@@ -147,6 +147,7 @@ exports.createOrder = async (req, res, next) => {
     
     // Create order items
     for (const item of items) {
+      console.log('Attempting to insert order item with productId:', item.productId);
       await connection.execute(`
         INSERT INTO order_items (
           order_id, product_id, product_name, product_price, 

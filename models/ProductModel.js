@@ -60,6 +60,9 @@ class Product {
         params.push(max_price);
       }
       
+      // Always exclude products with stock_quantity = 0
+      whereConditions.push('stock_quantity > 0');
+      
       if (whereConditions.length > 0) {
         whereClause = 'WHERE ' + whereConditions.join(' AND ');
       }
@@ -142,7 +145,7 @@ class Product {
    */
   static async findById(id) {
     const products = await query(
-      'SELECT * FROM products WHERE product_id = ?',
+      'SELECT * FROM products WHERE product_id = ? AND stock_quantity > 0',
       [id]
     );
     return products.length > 0 ? products[0] : null;
@@ -168,7 +171,7 @@ class Product {
    */
   static async search(searchTerm) {
     const products = await query(
-      'SELECT * FROM products WHERE name LIKE ?',
+      'SELECT * FROM products WHERE name LIKE ? AND stock_quantity > 0',
       [`%${searchTerm}%`]
     );
     
